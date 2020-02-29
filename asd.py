@@ -6,5 +6,5 @@ class Car:
         return "{}".format(self.color)
 
 myCar = Car("white")
-
-print(myCar)
+myCar2 = Car("black")
+print(myCar, myCar2)
