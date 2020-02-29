@@ -1,5 +1,7 @@
 import mysql.connector
 
+dbname = "EUPRONET"
+
 db = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -8,7 +10,7 @@ db = mysql.connector.connect(
 
 #Does the db exist already?
 cursor = db.cursor()
-cursor.execute("SHOW DATABASES LIKE 'EUPRONET';")
+cursor.execute(f"SHOW DATABASES LIKE '{dbname}';")
 result = cursor.fetchall()
 if(len(result) > 0):
     print("DB exists already.")
@@ -20,14 +22,14 @@ else:
         for sql in f.read().split(";"):
                 if(querycount == 1): 
                     #set cursor once db is created
-                    db.database = "EUPRONET"
+                    db.database = dbname
                     cursor = db.cursor()
 
                 cursor.execute(sql)
                 querycount += 1
     
 
-db.database = "EUPRONET"
+db.database = dbname
 cursor = db.cursor()
 
 sql = "SELECT orszag, nepesseg FROM orszagok WHERE nepesseg > 160000 LIMIT 3"
