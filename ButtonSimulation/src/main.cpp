@@ -1,18 +1,14 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#define BUTTON_COUNT 4
+#define BUTTON_COUNT 4 // Defines the number of buttons present
 
-// Initiaizing variables
-int buttons[] = {D8, D7, D6, D5};
+int buttons[] = {D8, D7, D6, D5}; // Defines the button pins
 int buttonState;
+
+// Network details
 const char* SSID = "GucziFamily";
 const char* PASSWD = "Spiderma-6";
-const String APIKEYVALUE = "wV9ysymCPn9yTYcilpIT";
-bool wasPressed[] = {false, false, false, false};
-bool isPressed[] = {false, false, false, false};
-bool hasOne = false;
-char resultPresses[4];
 
 void setup()
 {
@@ -40,11 +36,28 @@ void setup()
 
 }
 
-HTTPClient http;
+const String APIKEYVALUE = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
+
+// Button press logic variables
+bool wasPressed[] = {false, false, false, false};
+bool isPressed[] = {false, false, false, false};
+bool hasOne = false;
+
+String resultPresses = "0000"; // The string that is going to be sent
+
+// HTTP connection variables
+String httpServer = "http://192.168.1.2/ButtonListener/";
+
+// HTTP response check
+String payload;
+String httpResponseText;
+int httpResponseCode;
+
 void loop()
 {
-    if (WiFi.status() == WL_CONNECTED)
+    if (WiFi.status() == WL_CONNECTED) // Only do anything if we are connected to a network
     {
+        // Checks whether a button was pressed
         for (size_t i = 0; i < BUTTON_COUNT; i++)
         {
             isPressed[i] = digitalRead(buttons[i]) == HIGH ? true : false;
@@ -59,19 +72,28 @@ void loop()
             }
             wasPressed[i] = digitalRead(buttons[i]) == HIGH ? true : false;
         }
-        if (hasOne)
+        if (hasOne) // If a button was pressed
         {
-            http.begin("192.168.1.2/ButtonListener/index.php");
-            http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-            String httpResponseText = "apiKey=" + APIKEYVALUE + "&time=" + String(time(0)) +"&buttons=" + String(resultPresses);
-            Serial.println(httpResponseText);
-            int httpResponseCode = http.POST(httpResponseText);
-            if (httpResponseCode > 0)
-                Serial.println("Data was sent successfully!");
-            else
-                Serial.println("ERROR: " + String(httpResponseCode));
+            HTTPClient http; // Declares this device as an HTTP client
+            http.begin(httpServer); // Begins the connection with the specified server
+            http.addHeader("Content-Type", "application/x-www-form-urlencoded"); // Defines the content type header
+            // The values to be sent as a URL
+            httpResponseText = 
+                "apiKey=" + APIKEYVALUE + 
+                "&time=" + String(time(0)) + 
+                "&buttons=" + resultPresses;
 
-            http.end();
+            //Serial.println(httpResponseText);
+
+            httpResponseCode = http.POST(httpResponseText); // Sends the request with method POST
+            
+            //Check if everything worked correctly    
+            payload = http.getString();
+            Serial.println(httpResponseCode);
+            Serial.println(payload);
+
+            http.end(); // Close the connection
+
             hasOne = false;
         }
     }
