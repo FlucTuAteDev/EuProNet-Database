@@ -7,7 +7,7 @@
 int buttons[] = {D8, D7, D6, D5};
 int buttonState;
 const char* SSID = "GucziFamily";
-const char* PASSWD = "PASSWORD";
+const char* PASSWD = "Spiderma-6";
 const String APIKEYVALUE = "wV9ysymCPn9yTYcilpIT";
 bool wasPressed[] = {false, false, false, false};
 bool isPressed[] = {false, false, false, false};
