@@ -46,7 +46,7 @@ bool hasOne = false;
 String resultPresses = "0000"; // The string that is going to be sent
 
 // HTTP connection variables
-String httpServer = "http://192.168.1.2/ButtonListener/";
+String httpServer = "http://192.168.1.2:5000/"; // FLASK implementation
 
 // HTTP response check
 String payload;
