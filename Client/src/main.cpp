@@ -79,8 +79,7 @@ void loop()
             http.addHeader("Content-Type", "application/x-www-form-urlencoded"); // Defines the content type header
             // The values to be sent as a URL
             httpResponseText = 
-                "apiKey=" + APIKEYVALUE + 
-                "&time=" + String(time(0)) + 
+                "apiKey=" + APIKEYVALUE +  
                 "&buttons=" + resultPresses;
 
             //Serial.println(httpResponseText);
