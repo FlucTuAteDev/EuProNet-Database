@@ -1,4 +1,5 @@
 from flask import Flask, request
+from datetime import datetime
 APIKEYVALUE = "wV9ysymCPn9yTYcilpIT"
 filename = "buttonPresses.csv" # The name of the output file
 
@@ -9,7 +10,7 @@ app = Flask(__name__)
 def result():
     # Initialize posted data
     apiKey = request.form['apiKey']
-    time = request.form['time']
+    time = datetime.now().strftime("%Y.%m.%d %H:%M:%S")
     buttons = request.form['buttons']
 
     # If the APIs match
