@@ -12,12 +12,14 @@ def result():
     apiKey = request.form['apiKey']
     time = datetime.now().strftime("%Y.%m.%d %H:%M:%S")
     buttons = request.form['buttons']
+    discarded = request.form['discarded']
+    finished = request.form['finished']
 
     # If the APIs match
     if apiKey == APIKEYVALUE:
         # Write data to the output file
         with open(filename, "a") as f:
-            f.write(f"{time};{buttons}\n")
+            f.write(f"{time};{buttons};{discarded};{finished}\n")
     else:
         return "APIs don't match!"
     
