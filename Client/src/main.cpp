@@ -9,31 +9,6 @@ int colorButtonPins[] = {D8, D7, D6, D5}; // Defines the button pins
 // Network details
 const char* SSID = "GucziFamily";
 const char* PASSWD = "Spiderma-6";
-
-void setup()
-{
-    Serial.begin(115200);
-
-    // Connecting to home wifi
-    WiFi.begin(SSID, PASSWD);
-
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(1000);
-        Serial.print(".");
-    }
-
-    Serial.print("\nConnection established! IP address: ");
-    Serial.print(WiFi.localIP());
-
-    // Button init
-    for (int button : colorButtonPins)
-    {
-        pinMode(button, INPUT);
-    }
-    pinMode(okButtonPin, INPUT);
-}
-
 const String APIKEYVALUE = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
 
 // Button press logic variables
@@ -46,6 +21,14 @@ bool okButtonState = false;
 bool discarded = false;
 int currentButton = -1; // -1 -> No button selected
 
+// HTTP connection variables
+String httpServer = "http://192.168.1.2:5000/"; // FLASK implementation
+String payload;
+String httpResponseText;
+int httpResponseCode;
+
+// Serial communication variables
+String serialResponseText = "";
 
 // Helper functions
 String getStringFromBool(bool array[], int arrayLength)
@@ -70,12 +53,6 @@ void resetBoolArray(bool array[], int arrayLength)
     }
     
 }
-
-// HTTP connection variables
-String httpServer = "http://192.168.1.2:5000/"; // FLASK implementation
-String payload;
-String httpResponseText;
-int httpResponseCode;
 
 // Send data through wifi
 void SendDataWifi()
@@ -107,8 +84,6 @@ void SendDataWifi()
     }
 }
 
-// Serial communication variables
-String serialResponseText = "";
 // Send data through serial communication
 void SendDataSerial()
 {
@@ -119,6 +94,30 @@ void SendDataSerial()
         "&finished=" + getStringFromBool(okButtonState);
     
     Serial.println(serialResponseText);
+}
+
+void setup()
+{
+    Serial.begin(115200);
+
+    // Connecting to home wifi
+    WiFi.begin(SSID, PASSWD);
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(1000);
+        Serial.print(".");
+    }
+
+    Serial.print("\nConnection established! IP address: ");
+    Serial.print(WiFi.localIP());
+
+    // Button init
+    for (int button : colorButtonPins)
+    {
+        pinMode(button, INPUT);
+    }
+    pinMode(okButtonPin, INPUT);
 }
 
 void loop()
