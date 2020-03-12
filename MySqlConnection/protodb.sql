@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 10, 2020 at 06:04 PM
+-- Generation Time: Mar 12, 2020 at 06:43 PM
 -- Server version: 10.4.10-MariaDB
 -- PHP Version: 7.3.12
 
@@ -27,13 +27,23 @@ USE `eupronet`;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `aggstorage`
+-- Table structure for table `colors`
 --
 
-CREATE TABLE `aggstorage` (
-  `color` smallint(6) NOT NULL DEFAULT 0,
-  `count` int(11) NOT NULL DEFAULT 0
+CREATE TABLE `colors` (
+  `name` varchar(50) NOT NULL,
+  `id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `colors`
+--
+
+INSERT INTO `colors` (`name`, `id`) VALUES
+('RED', 1),
+('GREEN', 2),
+('BLUE', 3),
+('YELLOW', 4);
 
 -- --------------------------------------------------------
 
@@ -67,10 +77,11 @@ INSERT INTO `countrycodes` (`id`, `name`, `code`) VALUES
 
 CREATE TABLE `queries` (
   `id` int(11) NOT NULL,
-  `country` varchar(2) DEFAULT NULL,
+  `country` tinyint(2) UNSIGNED DEFAULT NULL,
   `color` smallint(6) DEFAULT NULL,
   `rfidtag` int(11) DEFAULT NULL,
-  `state` int(11) DEFAULT NULL
+  `state` int(11) DEFAULT NULL,
+  `date` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
@@ -78,10 +89,10 @@ CREATE TABLE `queries` (
 --
 
 --
--- Indexes for table `aggstorage`
+-- Indexes for table `colors`
 --
-ALTER TABLE `aggstorage`
-  ADD PRIMARY KEY (`color`);
+ALTER TABLE `colors`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `countrycodes`
@@ -98,6 +109,12 @@ ALTER TABLE `queries`
 --
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `colors`
+--
+ALTER TABLE `colors`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `countrycodes`
