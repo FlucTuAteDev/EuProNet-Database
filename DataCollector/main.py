@@ -1,16 +1,18 @@
 import argparse
-#from networkCommunication import network
-#from serialCommunication import serial
+# from networkCommunication import network
+# from serialCommunication import serial
 
 # Constant variables
-CFGFILE: str = "config.cfg"
-AVAILABLEMODES: list = ["network", "serial"]
-#AVAILABLEFUNCTIONS: list = [network, serial]
+CFGFILE = "config.cfg"
+AVAILABLEMODES = ["network", "serial"]
+# AVAILABLEFUNCTIONS: list = [network, serial]
 
 # Data storage
-data: dict = {}
+data = {}
+
 
 # Checks if the given configuration file defines the given element
+# with the either given or not given choices
 def cfgDefines(cfg: str, element: str, choices: list = []):
     try:
         with open(cfg, "r") as f:
@@ -22,26 +24,27 @@ def cfgDefines(cfg: str, element: str, choices: list = []):
                 else:
                     if content[0] == element and content[1].strip() != "":
                         break
-            else: 
+            else:
                 return False
             return True
     except:
         return False
 
+
 def main():
-    #########################################################################
-    #   CREATES THE CONFIG FILE AND PUTS THE DATA FROM THE CONSOLE INTO IT  #
-    #########################################################################
+    # PUT DATA INTO CONFIG FILE #
 
     # Create parser with arguments
-    parser = argparse.ArgumentParser(description="Puts data from production line to a file")
+    parser = argparse.ArgumentParser(
+        description="Puts data from production line to a file"
+    )
     parser.add_argument(
-        "-f", "--filename", 
+        "-f", "--filename",
         required=not cfgDefines(CFGFILE, "filename")
     )
     parser.add_argument(
-        "-m", "--mode", 
-        choices=AVAILABLEMODES, 
+        "-m", "--mode",
+        choices=AVAILABLEMODES,
         required=not cfgDefines(CFGFILE, "mode", AVAILABLEMODES)
     )
     parser.add_argument(
@@ -49,44 +52,32 @@ def main():
         required=not cfgDefines(CFGFILE, "apikey")
     )
 
+    # If the config file exists then read its data to the data dictionary
     try:
-        # Reads the data from the config file to the data dictionary
         with open(CFGFILE, "r") as f:
             fileContent = f.readlines()
             for row in fileContent:
                 currentElement = row.split("=")
                 if (len(currentElement) == 2):
-                    data[currentElement[0]] = currentElement[1].strip() # .strip() -> clears leading and trailing whitespaces
-
-        # If there were any changes made to the arguments then update the dictionary
-        args = parser.parse_args()
-        argsDict = vars(args)
-
-        # Update the data dictionary
-        for k, v in argsDict.items():
-            if v != None:
-                data[k] = v
-
-        # Also update the file
-        with open(CFGFILE, "w") as f:
-            for k, v in data.items():
-                f.write(f"{k}={v}\n")
+                    data[currentElement[0]] = currentElement[1].strip()
+    # If it doesn't exist then create the file
     except:
-        # If the config file does not exist then add it to the data
-        args = parser.parse_args()
-        data["filename"] = args.filename
-        data["mode"] = args.mode
-        data["apikey"] = args.apikey
+        with open(CFGFILE, "x"):
+            pass
 
-        # Also create the config file
-        with open(CFGFILE, "x") as f:
-            for k, v in data.items():
-                f.write(f"{k}={v}\n")
-    
-    #####################################################################
-    #   GETS THE DATA FROM THE WORKSTATION ACCORDING TO THE GIVEN MODE  #
-    #####################################################################
+    # Parse the arguments to a dictionary
+    args = parser.parse_args()
+    argsDict = vars(args)
 
+    # Update the data dictionary with the given arguments
+    for k, v in argsDict.items():
+        if v is not None:
+            data[k] = v
+
+    # Also update the file with the given arguments
+    with open(CFGFILE, "w") as f:
+        for k, v in data.items():
+            f.write(f"{k}={v}\n")
 
 if __name__ == "__main__":
     main()
