@@ -11,24 +11,21 @@ AVAILABLEMODES = ["network", "serial"]
 data = {}
 
 
-# Checks if the given configuration file defines the given element
+# Checks if the configuration file defines the given element
 # with the either given or not given choices
-def cfgDefines(cfg: str, element: str, choices: list = []):
+def cfgDefines(element, choices = [], cfg=CFGFILE):
     try:
         with open(cfg, "r") as f:
             for line in f.readlines():
-                content = line.split("=")
-                if len(choices) != 0:
-                    if content[0] == element and content[1].strip() in choices:
-                        break
-                else:
-                    if content[0] == element and content[1].strip() != "":
-                        break
-            else:
-                return False
-            return True
-    except:
-        return False
+                (key, value) = line.strip().split("=")
+                if(key == element):
+                    if value in choices:
+                        return True
+                    if choices == [] and value != "":
+                        return True
+    except: 
+        pass         
+    return False
 
 
 def main():
@@ -40,16 +37,16 @@ def main():
     )
     parser.add_argument(
         "-f", "--filename",
-        required=not cfgDefines(CFGFILE, "filename")
+        required=not cfgDefines("filename")
     )
     parser.add_argument(
         "-m", "--mode",
         choices=AVAILABLEMODES,
-        required=not cfgDefines(CFGFILE, "mode", AVAILABLEMODES)
+        required=not cfgDefines("mode", AVAILABLEMODES)
     )
     parser.add_argument(
         "-k", "--apikey",
-        required=not cfgDefines(CFGFILE, "apikey")
+        required=not cfgDefines("apikey")
     )
 
     # If the config file exists then read its data to the data dictionary
@@ -79,5 +76,6 @@ def main():
         for k, v in data.items():
             f.write(f"{k}={v}\n")
 
-if __name__ == "__main__":
-    main()
+##if __name__ == "__main__":
+main()
+print("cucc")
