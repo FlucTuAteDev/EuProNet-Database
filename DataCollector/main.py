@@ -24,8 +24,8 @@ def cfgDefines(element: str, cfg: str = CFGFILE, regex: str = ".*"):
     try:
         with open(cfg, "r") as f:
             for line in f.readlines():
-                content = line.split("=")
-                if content[0] == element and re.match(regex, content[1]):
+                (key, value) = line.split("=", 1)
+                if key == element and re.match(regex, value):
                     break
             else:
                 return False
