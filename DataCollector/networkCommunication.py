@@ -16,7 +16,7 @@ def network(filename: str, apiKey: str):
         if apiKey == requestApiKey:
             # Write data to the output file
             with open(filename, "a") as f:
-                f.write(f"date:{time};color:{color};\n")
+                f.write(f"date:{time};state:{state}\n")
         else:
             return "APIs don't match!"
         
