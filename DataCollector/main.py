@@ -1,29 +1,32 @@
 import argparse
-# from networkCommunication import network
-# from serialCommunication import serial
+import re
+import networkCommunication
+import serialCommunication
 
 # Constant variables
-CFGFILE = "config.cfg"
-AVAILABLEMODES = ["network", "serial"]
-# AVAILABLEFUNCTIONS: list = [network, serial]
+CFGFILE: str = "config.cfg"
+AVAILABLEMODES: dict = ["network": serial, "serial"]
 
 # Data storage
-data = {}
+data: dict = {}
+
+
+def listToRg(l: list):
+    result: list = []
+    for element in l:
+        result.append(f"^{element}$")
+    return '|'.join(result)
 
 
 # Checks if the given configuration file defines the given element
 # with the either given or not given choices
-def cfgDefines(cfg: str, element: str, choices: list = []):
+def cfgDefines(element: str, cfg: str = CFGFILE, regex: str = ".*"):
     try:
         with open(cfg, "r") as f:
             for line in f.readlines():
                 content = line.split("=")
-                if len(choices) != 0:
-                    if content[0] == element and content[1].strip() in choices:
-                        break
-                else:
-                    if content[0] == element and content[1].strip() != "":
-                        break
+                if content[0] == element and re.match(regex, content[1]):
+                    break
             else:
                 return False
             return True
@@ -40,17 +43,25 @@ def main():
     )
     parser.add_argument(
         "-f", "--filename",
-        required=not cfgDefines(CFGFILE, "filename")
+        required=not cfgDefines("filename")
     )
     parser.add_argument(
         "-m", "--mode",
         choices=AVAILABLEMODES,
-        required=not cfgDefines(CFGFILE, "mode", AVAILABLEMODES)
+        required=not cfgDefines("mode", regex=listToRg(AVAILABLEMODES))
     )
     parser.add_argument(
         "-k", "--apikey",
-        required=not cfgDefines(CFGFILE, "apikey")
+        required=not cfgDefines("apikey")
     )
+    parser.add_argument(
+        "-n", "--networkPort",
+        type=int
+    )
+    parser.add_argument(
+        "-s", "--serialPort"
+    )
+    
 
     # If the config file exists then read its data to the data dictionary
     try:

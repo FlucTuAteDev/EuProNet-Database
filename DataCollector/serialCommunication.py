@@ -1,21 +1,15 @@
 import serial
-
-APIKEYVALUE = "wV9ysymCPn9yTYcilpIT"
-serialCommunicationPort = 'COM8'
-baudrate = 115200
-isApiKey = False
-
-ser = serial.Serial(serialCommunicationPort, baudrate, timeout=1) # Starts the serial communication with the given parameters
-file = open("buttonPresses.csv", "a")
-while 1:
-    bytesToRead = ser.inWaiting()
-    if bytesToRead > 0:
-        rawInputData = str(ser.readline()).replace("\r\n", "")
-        print(rawInputData)
-        dataUnits = rawInputData.split("&")
-        for i in range(len(dataUnits)):
-            if i == 0:
-                isApiKey = dataUnits[i][1] == APIKEYVALUE
-                continue
-            if isApiKey:
-                file.write(dataUnits[i][1] + ";")
+import time
+# filename: str = "", apikey: str = "", port: str = "", baudrate: int = 9600
+def serialComm(**kwargs):
+    with serial.Serial(kwargs) as ser:
+        while 1:
+            if ser.inWaiting() > 0:
+                serialData = ser.readline()
+                serialData = serialData.split("&")
+                with open(kwargs["filename"], "a") as f:
+                    for data in serialData:
+                        dataParts = data.split("=")
+                        f.write(f"{dataParts[1]}")
+            else:
+                time.sleep(1)

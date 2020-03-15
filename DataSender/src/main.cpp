@@ -51,7 +51,6 @@ void resetBoolArray(bool array[], int arrayLength)
     {
         array[i] = false;
     }
-    
 }
 
 // Send data through wifi
