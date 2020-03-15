@@ -5,7 +5,7 @@ import serialCommunication
 
 # Constant variables
 CFGFILE: str = "config.cfg"
-AVAILABLEMODES: dict = ["network": serial, "serial"]
+AVAILABLEMODES: list = ["network", "serial"]
 
 # Data storage
 data: dict = {}
@@ -92,4 +92,3 @@ def main():
 
 ##if __name__ == "__main__":
 main()
-print("cucc")
