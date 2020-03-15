@@ -10,15 +10,13 @@ def network(filename: str, apiKey: str):
         # Initialize posted data
         requestApiKey = request.form['apiKey']
         time = datetime.now().strftime("%Y.%m.%d %H:%M:%S")
-        buttons = request.form['buttons']
-        discarded = request.form['discarded']
-        finished = request.form['finished']
+        state = request.form['state']
 
         # If the APIs match
         if apiKey == requestApiKey:
             # Write data to the output file
             with open(filename, "a") as f:
-                f.write(f"{time};{buttons};{discarded};{finished}\n")
+                f.write(f"date:{time};color:{color};\n")
         else:
             return "APIs don't match!"
         
