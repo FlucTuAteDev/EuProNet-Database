@@ -18,7 +18,7 @@ def listToRg(l: list):
     return '|'.join(result)
 
 
-# Checks if the given configuration file defines the given element
+# Checks if the configuration file defines the given element
 # with the either given or not given choices
 def cfgDefines(element: str, cfg: str = CFGFILE, regex: str = ".*"):
     try:
@@ -90,5 +90,6 @@ def main():
         for k, v in data.items():
             f.write(f"{k}={v}\n")
 
-if __name__ == "__main__":
-    main()
+##if __name__ == "__main__":
+main()
+print("cucc")
