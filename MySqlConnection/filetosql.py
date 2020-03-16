@@ -1,4 +1,6 @@
-##File to sql: Uploads buffer file contents to database
+"""
+File to sql: Uploads buffer file contents to database
+"""
 
 import mysql.connector
 import argparse
@@ -22,23 +24,36 @@ default = Settings(
 
 #   READ SETTINGS FROM CONFIGURATION FILE
 
-configured = default._asdict()
+fromcfg = default._asdict()
 try:    
     with open(os.path.join(dirname, "config.cfg"),"r", encoding="utf-8") as f:
         pattern = re.sub(r" ", "|", fields)
         for line in f.readlines():
             key, value =  [x.strip() for x in line.split("=", 1)]
             if(re.match(pattern, key)):
-                configured[key] = value
+                fromcfg[key] = value
 except:
     print("Config file doesn't exist or can't be read")
 
-configured = Settings(**configured)
-print(configured)
+## USER INPUT
 
+fromcfg = Settings(**fromcfg)
 parser = argparse.ArgumentParser(description="Uploads buffer file contents to database")
 
-#parser.add_argument()
+parser.add_argument(
+        "-f", "--filename", required= fromcfg.filename == None )
+parser.add_argument(
+        "-u", "--username", required= fromcfg.username == None )
+
+
+
+config = fromcfg._asdict()
+args = vars(parser.parse_args())
+for k in args:
+    if(args[k] != None):
+        config[k] = args[k]
+        
+print(Settings(**config))
 
 try:
     db = mysql.connector.connect(
