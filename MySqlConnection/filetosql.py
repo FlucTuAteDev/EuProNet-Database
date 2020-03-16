@@ -43,22 +43,24 @@ except:
 
 # 2. Ask user for any settings missing
 
-cfg = Settings(**cfg)
 parser = argparse.ArgumentParser(description="Uploads buffer file contents to database")
 
-parser.add_argument(
-        "-f", "--filename", required= cfg.filename == None )
-parser.add_argument(
-        "-u", "--username", required= cfg.username == None )
-parser.add_argument(
-        "-a", "--address", required= cfg.address == None )
-parser.add_argument(
-        "-p", "--password", required= cfg.address == None )       
-parser.add_argument(
-        "-l", "--logfile" )
+arg = namedtuple("Argument", "short long req")
+args = {
+    "filename": arg("-f", "--filename", True),
+    "username": arg("-u", "--username", True),
+    "address":  arg("-a", "--address" , True),
+    "password": arg("-p", "--password", True),
+    "logfile":  arg("-l", "--logfile" , False)
+}
+    
+for k in args:
+    a = args[k]
+    req = False
+    if(a.req):
+        req = cfg[k] == None 
+    parser.add_argument(a.short, a.long, required=req)
 
-
-cfg = cfg._asdict()
 args = vars(parser.parse_args())
 for k in args:
     if (args[k] != None and args[k].strip() != ""):
