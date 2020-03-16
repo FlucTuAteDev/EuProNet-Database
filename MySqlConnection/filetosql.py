@@ -5,12 +5,12 @@ File to sql: Uploads buffer file contents to database
 import mysql.connector
 import argparse
 import re
-import os
+from os import path
 from collections import namedtuple
 
-dirname = os.path.dirname(__file__)
+dirname = path.dirname(__file__)
 #protodb = os.path.join(dirname, "protodb.sql")
-CFGFILE = os.path.join(dirname, "config.cfg")
+CFGFILE = path.join(dirname, "config.cfg")
 
 # exposed, configurable settings
 fields = "address username password dbname filename logfile" 
@@ -35,7 +35,7 @@ try:
                 if(re.match(pattern, key)):
                     cfg[key] = value
                 else:
-                    print(f"Warning: Unexpected setting: {key} in configuration file")
+                    print(f"Warning: Unexpected setting '{key}'. It will be removed from the config file.")
             except ValueError :
                 print(f"Setting '{line.strip()}' is not an assignment. It will be removed from the config file.")
 except:
@@ -54,23 +54,21 @@ args = {
     "logfile":  arg("-l", "--logfile" , False)
 }
     
-for k in args:
-    a = args[k]
-    req = False
+for k, a in args.items():
+    # prompt user if config file doesn't define a required value
     if(a.req):
         req = cfg[k] == None 
     parser.add_argument(a.short, a.long, required=req)
 
 args = vars(parser.parse_args())
-for k in args:
-    if (args[k] != None and args[k].strip() != ""):
-        cfg[k] = args[k]
+for k, v in args.items():
+    if (v != None and v.strip() != ""):
+        cfg[k] = v
 
 # 3. Reconstruct config file
 
 with open(CFGFILE, "w", encoding="utf-8") as f:
-    for k in cfg:
-        v = cfg[k]
+    for k, v in cfg.items():
         if (v != None and v.strip() != ""): 
             f.write(f"{k} = {v}\n")
 
