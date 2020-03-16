@@ -9,61 +9,80 @@ import os
 from collections import namedtuple
 
 dirname = os.path.dirname(__file__)
-protodb = os.path.join(dirname, "protodb.sql")
+#protodb = os.path.join(dirname, "protodb.sql")
+CFGFILE = os.path.join(dirname, "config.cfg")
 
+# exposed, configurable settings
+fields = "address username password dbname filename logfile" 
 
-fields = "host username password dbname filename" # exposed, configurable settings
 Settings = namedtuple("Settings", fields, defaults=[None] * len(fields.split()))
 
 default = Settings(
     username= "HU", 
     password= "GkHfm0Sm5OZ6keqX",
-    host= "176.241.15.209",
+    address= "176.241.15.209",
     dbname= "EUPRONET"
 )
 
-#   READ SETTINGS FROM CONFIGURATION FILE
-
-fromcfg = default._asdict()
+#   1. Read settings from configuration file
+cfg =  default._asdict()
 try:    
-    with open(os.path.join(dirname, "config.cfg"),"r", encoding="utf-8") as f:
-        pattern = re.sub(r" ", "|", fields)
+    with open(CFGFILE,"r", encoding="utf-8") as f:
+        pattern = '|'.join( [f"^{x}$" for x in fields.split()] )
         for line in f.readlines():
-            key, value =  [x.strip() for x in line.split("=", 1)]
-            if(re.match(pattern, key)):
-                fromcfg[key] = value
+            try:
+                key, value =  [x.strip() for x in line.split("=", 1)]
+                if(re.match(pattern, key)):
+                    cfg[key] = value
+                else:
+                    print(f"Warning: Unexpected setting: {key} in configuration file")
+            except ValueError :
+                print(f"Setting '{line.strip()}' is not an assignment. It will be removed from the config file.")
 except:
-    print("Config file doesn't exist or can't be read")
+    print("Config file doesn't exist or could not be read")
 
-## USER INPUT
+# 2. Ask user for any settings missing
 
-fromcfg = Settings(**fromcfg)
+cfg = Settings(**cfg)
 parser = argparse.ArgumentParser(description="Uploads buffer file contents to database")
 
 parser.add_argument(
-        "-f", "--filename", required= fromcfg.filename == None )
+        "-f", "--filename", required= cfg.filename == None )
 parser.add_argument(
-        "-u", "--username", required= fromcfg.username == None )
+        "-u", "--username", required= cfg.username == None )
+parser.add_argument(
+        "-a", "--address", required= cfg.address == None )
+parser.add_argument(
+        "-p", "--password", required= cfg.address == None )       
+parser.add_argument(
+        "-l", "--logfile" )
 
 
-
-config = fromcfg._asdict()
+cfg = cfg._asdict()
 args = vars(parser.parse_args())
 for k in args:
-    if(args[k] != None):
-        config[k] = args[k]
-        
-print(Settings(**config))
+    if (args[k] != None and args[k].strip() != ""):
+        cfg[k] = args[k]
+
+# 3. Reconstruct config file
+
+with open(CFGFILE, "w", encoding="utf-8") as f:
+    for k in cfg:
+        v = cfg[k]
+        if (v != None and v.strip() != ""): 
+            f.write(f"{k} = {v}\n")
+
+cfg = Settings(**cfg)
 
 try:
     db = mysql.connector.connect(
-    host = default.host,
-    user = default.username,
-    passwd = default.password,
-    database = default.dbname
+        host = cfg.address,
+        user = cfg.username,
+        passwd = cfg.password,
+        database = cfg.dbname
     )
 except mysql.connector.errors.ProgrammingError as e:
-    print(f"Error: Could not estabilish connection to {default.host} \n {e}")
+    print(f"Error: Could not estabilish connection to {cfg.address}: \n {e}")
     quit()
 
 cursor = db.cursor()
