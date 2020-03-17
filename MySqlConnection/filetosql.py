@@ -1,6 +1,4 @@
-"""
-File to sql: Uploads buffer file contents to database
-"""
+"""File to sql: Uploads buffer file contents to database"""
 
 import mysql.connector
 import argparse
@@ -125,7 +123,7 @@ try:
                     vals = ", ".join((vals, f" '{v}'"))
                 history.append(l)
             except Exception as e:
-                print(f"Could not parse line '{l.strip()}'. It will be left in the buffer file. \n\t {e}")
+                print(f"Could not parse line '{l.strip()}'. It will be left in the buffer file.") #\n\t {e}")
                 unprocessed.append(l)
                 continue
 #6. Send query
