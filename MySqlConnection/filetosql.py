@@ -107,38 +107,54 @@ filepath = GetFullPath(cfg.filepath)
 history = []
 unprocessed = []
 
+#5. Read file contents to dictionary
+
+sql = f"SELECT id FROM `countrycodes` WHERE code = '{cfg.username}' LIMIT 1"
+cursor.execute(sql)
+countrycode = cursor.fetchone()[0]
 try:
     with open(filepath, "r") as f:
         for l in f.readlines():
-            pairs = {}
+            if l.strip() == "": continue
+            keys = "country"
+            vals = f"'{countrycode}'"
             try:
                 for pair in l.split(";"):
-                    k,v = [x.strip() for x in pair.split(":", 1)]
-                    pairs[k] = v     
+                    k,v = [x.strip() for x in pair.split(":", 1) if x.strip() != ""]
+                    keys = ", ".join((keys, k))
+                    vals = ", ".join((vals, f" '{v}'"))
                 history.append(l)
             except Exception as e:
                 print(f"Could not parse line '{l.strip()}'. It will be left in the buffer file. \n\t {e}")
                 unprocessed.append(l)
                 continue
-            print(pairs)
-except:
-    print(f"Could not read file at '{filepath}'")
+#6. Send query
+
+            #keys = ", ".join(keys)
+            #vals = ", ".join(f"'{v}'" for v in vals)
+            sql = f"INSERT INTO `queries` ({keys}) VALUES ({vals});"
+            print(sql)
+            cursor.execute(sql)
+                    
+except Exception as e:
+    print(f"Could not read file at '{filepath}'{e}")
     db.close()
     quit()
 
-with open(filepath, "w") as f:
-    for l in unprocessed:
-        f.write(l)
+db.commit()
 
+with open(filepath, "w") as f:
+    f.writelines(unprocessed)
 
 if cfg.logfile != None:
-    with open(GetFullPath(cfg.logfile), "a+") as f:
-        for l in history:
-            f.write(l)
+    with open(GetFullPath(cfg.logfile), "a") as f:
+        f.writelines(history)
+        f.write("\n")
+        
 
 
-cursor.execute(f"SELECT CURRENT_USER();")
-result = cursor.fetchall()
-print(result)
+# cursor.execute(f"SELECT CURRENT_USER();")
+# result = cursor.fetchall()
+# print(result)
 
 
