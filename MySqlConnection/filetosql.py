@@ -8,13 +8,18 @@ import re
 from os import path
 from collections import namedtuple
 
-dirname = path.dirname(__file__)
-#protodb = os.path.join(dirname, "protodb.sql")
-CFGFILE = path.join(dirname, "config.cfg")
-
+####################################################
 # exposed, configurable settings
-fields = "address username password dbname filename logfile" 
-
+fields = "address username password dbname filepath logfile" 
+arg = namedtuple("Argument", "short long req")
+args = {
+    "filepath": arg("-f", "--filepath", True),
+    "username": arg("-u", "--username", True),
+    "address":  arg("-a", "--address" , True),
+    "password": arg("-p", "--password", True),
+    "logfile":  arg("-l", "--logfile" , False)
+}
+####################################################
 Settings = namedtuple("Settings", fields, defaults=[None] * len(fields.split()))
 
 default = Settings(
@@ -23,6 +28,19 @@ default = Settings(
     address= "176.241.15.209",
     dbname= "EUPRONET"
 )
+
+dirname = path.dirname(__file__)
+#protodb = os.path.join(dirname, "protodb.sql")
+
+def GetFullPath(p, d = dirname):
+    if path.isabs(p):
+        return p
+    else:
+        return path.join(d,p)
+
+CFGFILE = GetFullPath("config.cfg")
+
+
 
 #   1. Read settings from configuration file
 cfg =  default._asdict()
@@ -45,14 +63,7 @@ except:
 
 parser = argparse.ArgumentParser(description="Uploads buffer file contents to database")
 
-arg = namedtuple("Argument", "short long req")
-args = {
-    "filename": arg("-f", "--filename", True),
-    "username": arg("-u", "--username", True),
-    "address":  arg("-a", "--address" , True),
-    "password": arg("-p", "--password", True),
-    "logfile":  arg("-l", "--logfile" , False)
-}
+
     
 for k, a in args.items():
     # prompt user if config file doesn't define a required value
@@ -74,20 +85,60 @@ with open(CFGFILE, "w", encoding="utf-8") as f:
 
 cfg = Settings(**cfg)
 
+#4. Connect to database
+
 try:
     db = mysql.connector.connect(
         host = cfg.address,
         user = cfg.username,
         passwd = cfg.password,
-        database = cfg.dbname
+        database = cfg.dbname,
+        connect_timeout = 3
     )
-except mysql.connector.errors.ProgrammingError as e:
+except Exception as e:
     print(f"Error: Could not estabilish connection to {cfg.address}: \n {e}")
     quit()
 
 cursor = db.cursor()
 # cursor.execute(f"SHOW DATABASES LIKE '{dbname}';")
 
+filepath = GetFullPath(cfg.filepath)
+
+history = []
+unprocessed = []
+
+try:
+    with open(filepath, "r") as f:
+        for l in f.readlines():
+            pairs = {}
+            try:
+                for pair in l.split(";"):
+                    k,v = [x.strip() for x in pair.split(":", 1)]
+                    pairs[k] = v     
+                history.append(l)
+            except Exception as e:
+                print(f"Could not parse line '{l.strip()}'. It will be left in the buffer file. \n\t {e}")
+                unprocessed.append(l)
+                continue
+            print(pairs)
+except:
+    print(f"Could not read file at '{filepath}'")
+    db.close()
+    quit()
+
+with open(filepath, "w") as f:
+    for l in unprocessed:
+        f.write(l)
+
+
+if cfg.logfile != None:
+    with open(GetFullPath(cfg.logfile), "a+") as f:
+        for l in history:
+            f.write(l)
+
+
 cursor.execute(f"SELECT CURRENT_USER();")
 result = cursor.fetchall()
 print(result)
+
+
