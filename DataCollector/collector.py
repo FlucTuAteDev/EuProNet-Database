@@ -2,33 +2,26 @@ import argparse
 import re
 from pathlib import Path
 
-def choicesToRg(l: list):
-    result: list = []
-    for element in l:
-        result.append(f"^{element}$")
-    return '|'.join(result)
-
-# Constant variables
-CFGFILE: str = Path(f"{__file__}\..").absolute()/'config.cfg' #  Configuration file path
+CFGFILE: str = Path(rf"{__file__}\..").absolute()/'config.cfg' #  Configuration file path
 AVAILABLE_MODES: list = ["network", "serial"]
+# Required configurations (name -> value regex)
 CONFIG_REQUIREMENTS = {
     "filename": ".+",
-    "mode": choicesToRg(AVAILABLE_MODES),
+    "mode": '|'.join(["^{}$".format(x) for x in AVAILABLE_MODES]), #  Pattern: ^a$|^b$|^c$...
     "apikey": ".+",
     "networkPort": "[0-9]{1,5}",
     "serialPort": ".+"
 }
 
 def main():
-    #############################################
-    #   READ DATA AND PUT DATA INTO CONFIG FILE #
-    #############################################
-
     # Configuration storage
     cfg: dict = {}
     # Set all the config values to None
+    # If cfg[key] remains None the parser knows to require that key
     for key in CONFIG_REQUIREMENTS.keys():
         cfg[key] = None
+        
+    # Read correct data into the cfg storage
     try:
         with open(CFGFILE, "r") as f:
             # Reads file content in dictionary like form: [[a, b], [c, d]]
@@ -57,14 +50,12 @@ def main():
         )
 
     # Parse the arguments to a dictionary
-    args = parser.parse_args()
-    argsDict = vars(args)
+    args = vars(parser.parse_args())
 
-    # Update the data dictionary with the given arguments
-    for key, value in argsDict.items():
+    # Update the cfg dictionary with the given arguments
+    for key, value in args.items():
         if value is not None and re.match(CONFIG_REQUIREMENTS[key], value):
             cfg[key] = value
-            break
 
     # Also update the file with the given arguments
     with open(CFGFILE, "w") as f:
