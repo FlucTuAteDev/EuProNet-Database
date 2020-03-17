@@ -1,13 +1,19 @@
 import argparse
 import re
 from pathlib import Path
+import mysql.connector
+from networkCommunication import networkComm
+from serialCommunication import serialComm
 
 CFGFILE: str = Path(rf"{__file__}\..").absolute()/'config.cfg' #  Configuration file path
-AVAILABLE_MODES: list = ["network", "serial"]
+AVAILABLE_MODES: dict = {
+    "network": networkComm, 
+    "serial": serialComm
+}
 # Required configurations (name -> value regex)
 CONFIG_REQUIREMENTS = {
-    "filename": ".+",
-    "mode": '|'.join(["^{}$".format(x) for x in AVAILABLE_MODES]), #  Pattern: ^a$|^b$|^c$...
+    "filepath": ".+",
+    "mode": '|'.join(["^{}$".format(x) for x in AVAILABLE_MODES.keys()]), #  Pattern: ^a$|^b$|^c$...
     "apikey": ".+",
     "networkPort": "[0-9]{1,5}",
     "serialPort": ".+"
@@ -61,6 +67,9 @@ def main():
     with open(CFGFILE, "w") as f:
         for k, v in cfg.items():
             f.write(f"{k}={v}\n")
+    
+    # Run the function of the given mode
+    AVAILABLE_MODES[cfg["mode"]](filepath=cfg["filepath"], apikey=cfg["apikey"])
 
-##if __name__ == "__main__":
-main()
+if __name__ == "__main__":
+    main()

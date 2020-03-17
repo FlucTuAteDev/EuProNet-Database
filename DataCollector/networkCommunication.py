@@ -1,7 +1,7 @@
 from flask import Flask, request
 from datetime import datetime
 # Handles incoming data from network and puts it into the file
-def networkComm(filename: str, apiKey: str, host: str = "0.0.0.0", port: int = 5000):
+def networkComm(filepath: str, apikey: str, host: str = '0.0.0.0', port: int = 5000):
     # Instantiates a new flask application
     app = Flask(__name__)
     # On the root path the result() method runs
@@ -11,10 +11,10 @@ def networkComm(filename: str, apiKey: str, host: str = "0.0.0.0", port: int = 5
         date = datetime.now().strftime("%Y.%m.%d %H:%M:%S")
 
         # If the APIs match
-        if apiKey == request.form['apiKey']:
+        if apikey == request.form['apikey']:
             # Write data to the output file
-            with open(filename, "a") as f:
-                f.write(f'date:{date};' + ';'.join(['{}:{}'.format(key, value) for key, value in request.form.items()]))
+            with open(filepath, "a") as f:
+                f.write(f"date:{date};{';'.join([f'{key}:{value}' for key, value in request.form.items() if key != 'apikey'])}\n")
         else:
             return "APIs don't match!"
         

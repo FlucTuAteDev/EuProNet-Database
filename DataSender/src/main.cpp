@@ -1,15 +1,15 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#define BUTTON_COUNT 4 // Defines the number of buttons present
+#define BUTTON_COUNT 4 // Defines the number of color buttons present
 
 int okButtonPin = D2; // Pin of the ok button
-int colorButtonPins[] = {D8, D7, D6, D5}; // Defines the button pins
+int colorButtonPins[] = {D8, D7, D6, D5}; // Defines the color button pins
 
 // Network details
 const char* SSID = "GucziFamily";
 const char* PASSWD = "Spiderma-6";
-const String APIKEYVALUE = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
+const String APIKEY = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
 
 // Button press logic variables
 bool wasPressed[] = {false, false, false, false};
@@ -19,6 +19,7 @@ bool colorButtonStates[] = {false, false, false, false};
 String colorButtonColors[] = {"Red", "Yellow", "Green", "Blue"};
 bool okButtonState = false;
 bool discarded = false;
+String state;
 int currentButton = -1; // -1 -> No button selected
 
 // HTTP connection variables
@@ -31,18 +32,14 @@ int httpResponseCode;
 String serialResponseText = "";
 
 // Helper functions
-String getStringFromBool(bool array[], int arrayLength)
+int getIntFromBool(bool array[], int arrayLength)
 {
-    String result;
     for (size_t i = 0; i < arrayLength; i++)
     {
-        result += array[i] ? "1" : "0";
+        if (array[i])
+            return i + 1;
     }
-    return result;
-}
-String getStringFromBool(bool variable)
-{
-    return variable ? "1" : "0";
+    return -1;
 }
 
 void resetBoolArray(bool array[], int arrayLength)
@@ -62,11 +59,11 @@ void SendDataWifi()
 
     // The values to be sent as a URL
     httpResponseText = 
-        "apiKey=" + APIKEYVALUE + 
-        "&buttons=" + getStringFromBool(colorButtonStates, BUTTON_COUNT) +
-        "&discarded=" + getStringFromBool(discarded) +
-        "&finished=" + getStringFromBool(okButtonState);
+        "apikey=" + APIKEY +
+        "&color=" + String(getIntFromBool(colorButtonStates, BUTTON_COUNT)) +
+        "&state=" + String(discarded ? "2" : (okButtonState ? "3" : "1"));
 
+    Serial.println(httpResponseText);
     httpResponseCode = http.POST(httpResponseText); // Sends the request with method POST
     
     //Check if everything worked correctly    
@@ -84,16 +81,17 @@ void SendDataWifi()
 }
 
 // Send data through serial communication
+/*
 void SendDataSerial()
 {
     serialResponseText = 
-        "apiKey=" + APIKEYVALUE + 
-        "&buttons=" + getStringFromBool(colorButtonStates, BUTTON_COUNT) +
-        "&discarded=" + getStringFromBool(discarded) +
-        "&finished=" + getStringFromBool(okButtonState);
+        "apikey:" + APIKEY +
+        ";color:" + String(getIntFromBool(colorButtonStates, BUTTON_COUNT)) +
+        ";state:" + String(discarded ? "2" : (okButtonState ? "3" : "1"));
     
     Serial.println(serialResponseText);
 }
+*/
 
 void setup()
 {
@@ -109,7 +107,7 @@ void setup()
     }
 
     Serial.print("\nConnection established! IP address: ");
-    Serial.print(WiFi.localIP());
+    Serial.println(WiFi.localIP());
 
     // Button init
     for (int button : colorButtonPins)
@@ -130,23 +128,32 @@ void loop()
             isPressed[i] = currentButtonState; // Whether the button is pressed now
             if (!isPressed[i] && wasPressed[i]) // The user lets the button go
             {
-                if (currentButton != -1 && !colorButtonStates[i]) // If a button is stated at the moment and it is not this button, don't process the request
+                if (currentButton != -1 && !colorButtonStates[i]) // If a color is selected at the moment and it is not this button, don't process the request
                 {
                     wasPressed[i] = currentButtonState;
                     break;
                 }
                 else if (currentButton != -1 && colorButtonStates[i]) // If it is this button than discard
+                {
                     discarded = true;
-                colorButtonStates[i] = !colorButtonStates[i]; // Negate the button's state
+                }
                 currentButton = discarded ? -1 : i; // Set the current button's value to i if it is not discarded
-                SendDataSerial(); // Send the data to the server
-                discarded = false;
+                if (!discarded)
+                {
+                    colorButtonStates[i] = !colorButtonStates[i]; // Negate the button's state
+                }
+                SendDataWifi(); // Send the data to the server
+                if (discarded)
+                {
+                    discarded = false;
+                    colorButtonStates[i] = !colorButtonStates[i]; // Negate the button's state
+                }
             }
             wasPressed[i] = currentButtonState; // Stores the button press of the cycle
         }
 
         okButtonState = currentButton != -1 && digitalRead(okButtonPin) == HIGH; // The ok button should only be pressed if there is already a color button pressed
         if (okButtonState) // If that's the case then send the data
-            SendDataSerial();
+            SendDataWifi();
     }
 }
