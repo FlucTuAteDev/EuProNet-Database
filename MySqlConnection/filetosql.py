@@ -148,11 +148,4 @@ if cfg.logfile != None:
     with open(GetFullPath(cfg.logfile), "a") as f:
         f.writelines(history)
         f.write("\n")
-        
-
-
-# cursor.execute(f"SELECT CURRENT_USER();")
-# result = cursor.fetchall()
-# print(result)
-
-
+    
