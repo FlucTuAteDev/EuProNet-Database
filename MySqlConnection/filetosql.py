@@ -72,7 +72,7 @@ except:
 # endregion
 
 # region 2. Ask user for any settings missing
-
+#TODO: revert settings to default from cmd
 
 parser = argparse.ArgumentParser(description="Uploads buffer file contents to database")
 
@@ -118,7 +118,7 @@ except Exception as e:
 cursor = db.cursor()
 # endregion
 
-# region 5. Get country code from username
+# region 5. Check if file exists and get country code
 filepath = GetFullPath(cfg.filepath)
 if not path.isfile(filepath):
     print(f"Could not read file at '{filepath}''")
@@ -132,8 +132,10 @@ countrycode = cursor.fetchone()[0]  # TODO: handle if this returns empty
 
 # region 6. Upload
 
-unprocessed = set([])
+# TODO: check if keys given are real column names
+# TODO: check if given state values exist and ask to create them if they don't
 
+unprocessed = set([])
 
 def Upload():
     """ Reads file contents to dictionary
