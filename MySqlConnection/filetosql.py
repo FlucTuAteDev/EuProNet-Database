@@ -1,11 +1,15 @@
 """File to sql: Uploads buffer file contents to database"""
 
 import sys
+import time
+import datetime
 import mysql.connector
 import argparse
 import re
 from os import path
 from collections import namedtuple
+from watchdog.observers import Observer
+from watchdog.events import LoggingEventHandler
 
 ####################################################
 # exposed, configurable settings
@@ -29,7 +33,6 @@ default = Settings(
 )
 
 dirname = path.dirname(__file__)
-#protodb = os.path.join(dirname, "protodb.sql")
 
 def GetFullPath(p, d = dirname):
     if path.isabs(p):
@@ -102,19 +105,27 @@ cursor = db.cursor()
 # cursor.execute(f"SHOW DATABASES LIKE '{dbname}';")
 
 filepath = GetFullPath(cfg.filepath)
-
-history = []
-unprocessed = []
-
-#5. Read file contents to dictionary
+if not path.isfile(filepath):
+    print(f"Could not read file at '{filepath}''")
+    db.close()
+    sys.exit()
 
 sql = f"SELECT id FROM `countrycodes` WHERE code = '{cfg.username}' LIMIT 1"
 cursor.execute(sql)
 countrycode = cursor.fetchone()[0] # TODO: handle if this returns empty
-try:
+
+unprocessed = set([])
+
+def Upload():
+    """ Reads file contents to dictionary
+        Sends query
+        Updates history and unprocessed
+        Returns the  number of queries sent"""
+    history = []
+
     with open(filepath, "r") as f:
         for l in f.readlines():
-            if l.strip() == "": continue
+            if l.strip() == "" or l in unprocessed: continue
             keys = "country"
             vals = f"'{countrycode}'"
             try:
@@ -124,30 +135,39 @@ try:
                     vals = ", ".join((vals, f" '{v}'"))
                 history.append(l)
             except Exception as e:
-                print(f"Could not parse line '{l.strip()}'. It will be left in the buffer file.") #\n\t {e}")
-                unprocessed.append(l)
+                print(f" Could not parse line '{l.strip()}'. It will be left in the buffer file.") #\n\t {e}")
+                unprocessed.add(l)
                 continue
-#6. Send query
+            #Send query
 
             sql = f"INSERT INTO `queries` ({keys}) VALUES ({vals});"
-            print(sql)
+            #print(sql)
             try:
                 cursor.execute(sql)
             except Exception as e:
                 print(f"SQL Error: {e}")
-                    
-except Exception as e:
-    print(f"Could not read file at '{filepath}'{e}")
-    db.close()
-    sys.exit()
+                        
+    db.commit()
 
-db.commit()
+    with open(filepath, "w") as f:
+        f.writelines(unprocessed)
 
-with open(filepath, "w") as f:
-    f.writelines(unprocessed)
+    if history != [] and cfg.logfile != None:
+        with open(GetFullPath(cfg.logfile), "a") as f:
+            f.writelines(history)
+            f.write("\n")
 
-if history and cfg.logfile != None:
-    with open(GetFullPath(cfg.logfile), "a") as f:
-        f.writelines(history)
-        f.write("\n")
+    return len(history)
     
+print(f"Monitoring {cfg.filepath} [CTRL+C to exit] ...") #TODO animate: Monitoring. .. ...
+try:
+    while True:
+        sent = Upload()
+        if(sent): 
+            timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
+            print(f" {timestamp} - Sent {sent}")
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("Monitoring ended")
+
+db.close()
