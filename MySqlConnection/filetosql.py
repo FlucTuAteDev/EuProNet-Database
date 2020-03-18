@@ -1,5 +1,6 @@
 """File to sql: Uploads buffer file contents to database"""
 
+import sys
 import mysql.connector
 import argparse
 import re
@@ -95,7 +96,7 @@ try:
     )
 except Exception as e:
     print(f"Error: Could not estabilish connection to {cfg.address}: \n {e}")
-    quit()
+    sys.exit()
 
 cursor = db.cursor()
 # cursor.execute(f"SHOW DATABASES LIKE '{dbname}';")
@@ -109,7 +110,7 @@ unprocessed = []
 
 sql = f"SELECT id FROM `countrycodes` WHERE code = '{cfg.username}' LIMIT 1"
 cursor.execute(sql)
-countrycode = cursor.fetchone()[0]
+countrycode = cursor.fetchone()[0] # TODO: handle if this returns empty
 try:
     with open(filepath, "r") as f:
         for l in f.readlines():
@@ -128,23 +129,24 @@ try:
                 continue
 #6. Send query
 
-            #keys = ", ".join(keys)
-            #vals = ", ".join(f"'{v}'" for v in vals)
             sql = f"INSERT INTO `queries` ({keys}) VALUES ({vals});"
             print(sql)
-            cursor.execute(sql)
+            try:
+                cursor.execute(sql)
+            except Exception as e:
+                print(f"SQL Error: {e}")
                     
 except Exception as e:
     print(f"Could not read file at '{filepath}'{e}")
     db.close()
-    quit()
+    sys.exit()
 
 db.commit()
 
 with open(filepath, "w") as f:
     f.writelines(unprocessed)
 
-if cfg.logfile != None:
+if history and cfg.logfile != None:
     with open(GetFullPath(cfg.logfile), "a") as f:
         f.writelines(history)
         f.write("\n")
