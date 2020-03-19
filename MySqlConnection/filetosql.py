@@ -134,6 +134,7 @@ countrycode = cursor.fetchone()[0]  # TODO: handle if this returns empty
 
 # TODO: check if keys given are real column names
 # TODO: check if given state values exist and ask to create them if they don't
+# TODO: stop adding back unprocessed lines if they were edited at runtime
 
 unprocessed = set([])
 
@@ -149,16 +150,16 @@ def Upload():
             if l.strip() == "" or l in unprocessed:
                 continue
             keys = "country"
-            vals = f"'{countrycode}'"
+            vals = f"{countrycode!r}"
             try:
                 for pair in l.split(";"):
                     k, v = [x.strip() for x in pair.split(":", 1) if x.strip() != ""]
                     keys = ", ".join((keys, k))
-                    vals = ", ".join((vals, f" '{v}'"))
+                    vals = ", ".join((vals, f" {v!r}"))  #!r : uses 'repr' to put it in quotes
                 history.append(l)
             except Exception as e:
                 print(
-                    f" Could not parse line '{l.strip()}'. It will be left in the buffer file."
+                    f" Could not parse line {l.strip()!r}. It will be left in the buffer file."
                 )  # \n\t {e}")
                 unprocessed.add(l)
                 continue
@@ -169,7 +170,7 @@ def Upload():
             try:
                 cursor.execute(sql)
             except Exception as e:
-                print(f"SQL Error: {e}")
+                print(f"SQL Error: {e!r}")
 
     db.commit()
 

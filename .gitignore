@@ -1,1 +1,4 @@
 .vscode
+**/config.cfg
+**/file.csv
+**/history.csv
