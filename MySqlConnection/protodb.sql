@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 12, 2020 at 06:43 PM
+-- Generation Time: Mar 19, 2020 at 11:35 AM
 -- Server version: 10.4.10-MariaDB
 -- PHP Version: 7.3.12
 
@@ -84,6 +84,19 @@ CREATE TABLE `queries` (
   `date` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `states`
+--
+
+CREATE TABLE `states` (
+  `id` smallint(6) NOT NULL,
+  `country` smallint(6) NOT NULL,
+  `code` smallint(6) NOT NULL,
+  `message` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 --
 -- Indexes for dumped tables
 --
@@ -107,6 +120,12 @@ ALTER TABLE `queries`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `states`
+--
+ALTER TABLE `states`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -127,6 +146,12 @@ ALTER TABLE `countrycodes`
 --
 ALTER TABLE `queries`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `states`
+--
+ALTER TABLE `states`
+  MODIFY `id` smallint(6) NOT NULL AUTO_INCREMENT;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -26,9 +26,7 @@ args = {
 Settings = namedtuple("Settings", fields, defaults=[None] * len(fields.split()))
 
 default = Settings(
-    username="HU",
-    password="GkHfm0Sm5OZ6keqX",
-    address="176.241.15.209",
+    address="176.241.29.199",
     dbname="EUPRONET",
 )
 # endregion
