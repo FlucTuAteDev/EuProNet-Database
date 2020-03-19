@@ -50,16 +50,14 @@ CFGFILE = GetFullPath("config.cfg")
 cfg = default._asdict()
 try:
     with open(CFGFILE, "r", encoding="utf-8") as f:
-        pattern = "|".join([f"^{x}$" for x in fields.split()])
+        pattern = "|".join([f"^{x}$" for x in fields.split()]) # ^field$: exact match
         for line in f.readlines():
             try:
                 key, value = [x.strip() for x in line.split("=", 1)]
                 if re.match(pattern, key):
                     cfg[key] = value
                 else:
-                    print(
-                        f"Warning: Unexpected setting '{key}'. It will be removed from the config file."
-                    )
+                    print(f"Warning: Unexpected setting '{key}'. It will be removed from the config file.")
             except ValueError:
                 print(
                     f"Setting '{line.strip()}' is not an assignment. It will be removed from the config file."
@@ -70,15 +68,18 @@ except:
 # endregion
 
 # region 2. Ask user for any settings missing
-#TODO: revert settings to default from cmd
+#TODO: arg to revert settings to default from cmd
+#TODO: write to cfg even if not all of required settings are specified
 
 parser = argparse.ArgumentParser(description="Uploads buffer file contents to database")
 
 
 for k, a in args.items():
     # prompt user if config file doesn't define a required value
+    req = False
     if a.req:
-        req = cfg[k] == None
+        c = cfg[k]
+        req = c == None or c.strip() == "" #empty or unspecified
     parser.add_argument(a.short, a.long, required=req)
 
 args = vars(parser.parse_args())
@@ -133,13 +134,15 @@ countrycode = cursor.fetchone()[0]  # TODO: handle if this returns empty
 # TODO: check if keys given are real column names
 # TODO: check if given state values exist and ask to create them if they don't
 # TODO: stop adding back unprocessed lines if they were edited at runtime
+# TODO: add date if it doesn't exist 
+# TODO: correct excused formatting mistakes when writing to history (e.g. ;;;)
 
 unprocessed = set([])
 
 def Upload():
     """ Reads file contents to dictionary
         Sends query
-        Updates history and unprocessed
+        Updates 'history' and 'unprocessed'
         Returns the  number of queries sent"""
     history = []
 
@@ -151,24 +154,30 @@ def Upload():
             vals = f"{countrycode!r}"
             try:
                 for pair in l.split(";"):
+                    if(pair.strip() == ""): continue
                     k, v = [x.strip() for x in pair.split(":", 1) if x.strip() != ""]
                     keys = ", ".join((keys, k))
-                    vals = ", ".join((vals, f" {v!r}"))  #!r : uses 'repr' to put it in quotes
+                    vals = ", ".join((vals, f"{v!r}"))  #!r : uses 'repr' to put it in quotes
                 history.append(l)
-            except Exception as e:
+            except: # Exception as e:
                 print(
                     f" Could not parse line {l.strip()!r}. It will be left in the buffer file."
                 )  # \n\t {e}")
                 unprocessed.add(l)
                 continue
+            # Add date if it's not in yet
+            if "date" not in keys:
+                timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
+                keys = ", ".join((keys, "date"))
+                vals = ", ".join((vals, f"{timestamp!r}"))
             # Send query
 
             sql = f"INSERT INTO `queries` ({keys}) VALUES ({vals});"
-            # print(sql)
-            try:
-                cursor.execute(sql)
-            except Exception as e:
-                print(f"SQL Error: {e!r}")
+            print(sql)
+            # try:
+            #     cursor.execute(sql)
+            # except Exception as e:
+            #     print(f"SQL Error: {e!r}")
 
     db.commit()
 
@@ -193,7 +202,7 @@ try:
     while True:
         sent = Upload()
         if sent:
-            timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
+            timestamp = time.strftime(r"%H:%M:%S")
             print(f" {timestamp} - Sent {sent}")
         time.sleep(1)
 except KeyboardInterrupt:
