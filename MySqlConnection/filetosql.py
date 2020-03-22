@@ -47,6 +47,8 @@ CFGFILE = GetFullPath("config.cfg")
 # endregion
 
 # region 1. Read settings from configuration file
+
+#TODO:  custom exceptions    
 cfg = default._asdict()
 try:
     with open(CFGFILE, "r", encoding="utf-8") as f:
@@ -91,10 +93,12 @@ for k, v in args.items():
 
 # region 3. Reconstruct config file
 
+def NotEmptyOrNone(value: v):
+    return v != None and v.strip() != ""
 
 with open(CFGFILE, "w", encoding="utf-8") as f:
     for k, v in cfg.items():
-        if v != None and v.strip() != "":
+        if NotEmptyOrNone(v):
             f.write(f"{k} = {v}\n")
 
 cfg = Settings(**cfg)
@@ -137,6 +141,28 @@ countrycode = cursor.fetchone()[0]  # TODO: handle if this returns empty
 # TODO: add date if it doesn't exist 
 # TODO: correct excused formatting mistakes when writing to history (e.g. ;;;)
 
+
+def SQLInsert(data, cursor, addDate = True, table = "queries"):
+
+    # Add date if it's not in yet
+    if addDate and "date" not in data.keys():
+        timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
+        data["date"] = timestamp
+
+    cols = ", ".join(data.keys())
+    #!r: uses __repr__ to wrap value in quotes
+    vals = ", ".join([f"{p!r}" for p in data.values()])
+
+    sql = f"INSERT INTO `{table}` ({cols}) VALUES ({vals});"
+
+    try:
+        cursor.execute(sql)
+    except Exception as e:
+        print(f"SQL Error: {e!r}")
+
+    return sql
+
+
 unprocessed = set([])
 
 def Upload():
@@ -148,36 +174,24 @@ def Upload():
 
     with open(filepath, "r") as f:
         for l in f.readlines():
-            if l.strip() == "" or l in unprocessed:
-                continue
-            keys = "country"
-            vals = f"{countrycode!r}"
+            if l.strip() == "" or l in unprocessed: continue
+            data = {"country": countrycode}
             try:
                 for pair in l.split(";"):
                     if(pair.strip() == ""): continue
+                    #seperate at the first ':'; remove unneeded whitespace; ignore empty assignments
                     k, v = [x.strip() for x in pair.split(":", 1) if x.strip() != ""]
-                    keys = ", ".join((keys, k))
-                    vals = ", ".join((vals, f"{v!r}"))  #!r : uses 'repr' to put it in quotes
+                    data[k] = v
                 history.append(l)
             except: # Exception as e:
-                print(
-                    f" Could not parse line {l.strip()!r}. It will be left in the buffer file."
-                )  # \n\t {e}")
+                print(f" Could not parse line {l.strip()!r}. It will be left in the buffer file.")  # \n\t {e}")
                 unprocessed.add(l)
                 continue
-            # Add date if it's not in yet
-            if "date" not in keys:
-                timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
-                keys = ", ".join((keys, "date"))
-                vals = ", ".join((vals, f"{timestamp!r}"))
+            
+            
             # Send query
-
-            sql = f"INSERT INTO `queries` ({keys}) VALUES ({vals});"
+            sql = SQLInsert(data, cursor)
             print(sql)
-            # try:
-            #     cursor.execute(sql)
-            # except Exception as e:
-            #     print(f"SQL Error: {e!r}")
 
     db.commit()
 
