@@ -142,9 +142,13 @@ countrycode = cursor.fetchone()[0]  # TODO: handle if this returns empty
 # TODO: correct excused formatting mistakes when writing to history (e.g. ;;;)
 
 
-def SQLInsert(data, cursor, addDate = True, table = "queries"):
+def SQLInsert(data, cursor = None, addDate = True, table = "queries"):
+    """ Takes in a dictionary of 'columns:values' and
+        turns them into an sql insert statement 
 
-    # Add date if it's not in yet
+        addDate: appends 'date:timestamp' if it doesn't exist yet
+        returns the sql query"""
+
     if addDate and "date" not in data.keys():
         timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
         data["date"] = timestamp
@@ -153,14 +157,7 @@ def SQLInsert(data, cursor, addDate = True, table = "queries"):
     #!r: uses __repr__ to wrap value in quotes
     vals = ", ".join([f"{p!r}" for p in data.values()])
 
-    sql = f"INSERT INTO `{table}` ({cols}) VALUES ({vals});"
-
-    try:
-        cursor.execute(sql)
-    except Exception as e:
-        print(f"SQL Error: {e!r}")
-
-    return sql
+    return f"INSERT INTO `{table}` ({cols}) VALUES ({vals});"
 
 
 unprocessed = set([])
@@ -182,7 +179,6 @@ def Upload():
                     #seperate at the first ':'; remove unneeded whitespace; ignore empty assignments
                     k, v = [x.strip() for x in pair.split(":", 1) if x.strip() != ""]
                     data[k] = v
-                history.append(l)
             except: # Exception as e:
                 print(f" Could not parse line {l.strip()!r}. It will be left in the buffer file.")  # \n\t {e}")
                 unprocessed.add(l)
@@ -190,9 +186,14 @@ def Upload():
             
             
             # Send query
-            sql = SQLInsert(data, cursor)
+            sql = SQLInsert(data)
             print(sql)
-
+            try:
+                cursor.execute(sql)
+                history.append(l)
+            except Exception as e:
+                print(f"SQL Error: {e!r}")
+                
     db.commit()
 
     with open(filepath, "w") as f:
