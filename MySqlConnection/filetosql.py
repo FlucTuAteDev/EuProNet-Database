@@ -29,6 +29,7 @@ default = Settings(
     address="176.241.29.199",
     dbname="EUPRONET",
 )
+
 # endregion
 
 # region absolute paths
@@ -124,7 +125,7 @@ cursor = db.cursor()
 # region 5. Check if file exists and get country code
 filepath = GetFullPath(cfg.filepath)
 if not path.isfile(filepath):
-    print(f"Could not read file at '{filepath}''")
+    print(f"Could not read file at '{filepath}'")
     db.close()
     sys.exit()
 
