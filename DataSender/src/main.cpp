@@ -1,67 +1,43 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#define BUTTON_COUNT 4 // Defines the number of color buttons present
+#define COLOR_COUNT 4 // Defines the number of color buttons present
+// Switch high / low for leds
+#define SWITCH 0x01
 
-int okButtonPin = D2; // Pin of the ok button
-int colorButtonPins[] = {D8, D7, D6, D5}; // Defines the color button pins
-
-// Network details
-const char* SSID = "GucziFamily";
-const char* PASSWD = "Spiderma-6";
-const String APIKEY = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
+// Pins
+int finishButtonPin = D3;
+int colorButtonPins[] = {D5, D6, D7, D8};
+int ledPins[] = {D0, D1, D2, D4};
 
 // Button press logic variables
-bool wasPressed[] = {false, false, false, false};
-bool isPressed[] = {false, false, false, false};
-bool currentButtonState = false;
-bool colorButtonStates[] = {false, false, false, false};
-String colorButtonColors[] = {"Red", "Yellow", "Green", "Blue"};
-bool okButtonState = false;
-bool discarded = false;
-String state;
-int currentButton = -1; // -1 -> No button selected
+enum State { None, Started, Discarded, Finished };
+State colorButtonStates[COLOR_COUNT] { None };
+volatile bool stateChanged = false;
+volatile int stateChIndex = -1;
+
+// Network details
+const char* SSID = "SandroPC";
+const char* PASSWD = "123456789";
+const String APIKEY = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
 
 // HTTP connection variables
-String httpServer = "http://192.168.1.2:5000/"; // FLASK implementation
+String httpServer = "http://192.168.137.208:5000/"; // FLASK implementation
 String payload;
 String httpResponseText;
 int httpResponseCode;
 
-// Serial communication variables
-String serialResponseText = "";
-
-// Helper functions
-int getIntFromBool(bool array[], int arrayLength)
-{
-    for (size_t i = 0; i < arrayLength; i++)
-    {
-        if (array[i])
-            return i + 1;
-    }
-    return -1;
-}
-
-void resetBoolArray(bool array[], int arrayLength)
-{
-    for (size_t i = 0; i < arrayLength; i++)
-    {
-        array[i] = false;
-    }
-}
-
 // Send data through wifi
-void SendDataWifi()
+void SendData(int color, int state)
 {
     HTTPClient http; // Declares this device as an HTTP client
     http.begin(httpServer); // Begins the connection with the specified server
     http.addHeader("Content-Type", "application/x-www-form-urlencoded"); // Defines the content type header
-
     // The values to be sent as a URL
     httpResponseText = 
-        "apikey=" + APIKEY +
-        "&color=" + String(getIntFromBool(colorButtonStates, BUTTON_COUNT)) +
-        "&state=" + String(discarded ? "2" : (okButtonState ? "3" : "1"));
+        "apikey=" + APIKEY + 
+        "&color=" + String(color) + 
+        "&state=" + String(state);
 
     Serial.println(httpResponseText);
     httpResponseCode = http.POST(httpResponseText); // Sends the request with method POST
@@ -69,35 +45,74 @@ void SendDataWifi()
     //Check if everything worked correctly    
     payload = http.getString();
     Serial.println(httpResponseCode);
-    Serial.println(payload);
-
+    //Serial.println(payload);
     http.end(); // Close the connection
+}
 
-    if (okButtonState) // If the ok button was pressed than reset the presses
+// Runs when a color button is pressed
+void ICACHE_RAM_ATTR colorInterrupt(void* pinp)
+{
+    // If the previous interrupt wasn't processed then don't proceed
+    if (stateChanged) return;
+
+    // Get the GPIO pin from the pointer
+    int pin = *(int*)pinp;
+
+    // If there is a button with some state which is not the currently pressed one then don't proceed
+    for (int i = 0; i < COLOR_COUNT; i++)
     {
-        resetBoolArray(colorButtonStates, BUTTON_COUNT);
-        currentButton = -1;
+        if (colorButtonPins[i] != pin && colorButtonStates[i] != State::None)
+            return;
+    }
+
+    // Search for the current button in the pins array
+    for (int i = 0; i < COLOR_COUNT; i++)
+    {
+        if (colorButtonPins[i] == pin)
+        {
+            // If the button doesn't have a state then set it to started and turn on the indicator led
+            if (colorButtonStates[i] == State::None)
+            {
+                colorButtonStates[i] = State::Started;
+                digitalWrite(ledPins[i], HIGH xor SWITCH);
+            }
+            // If its state is started then set it to discarded and turn off the indicator led
+            else if (colorButtonStates[i] == State::Started)
+            {
+                colorButtonStates[i] = State::Discarded;
+                digitalWrite(ledPins[i], LOW xor SWITCH);
+            }
+            stateChanged = true;
+            stateChIndex = i;
+            break;
+        }
     }
 }
 
-// Send data through serial communication
-/*
-void SendDataSerial()
+// Runs when the finish button is pressed
+void ICACHE_RAM_ATTR finishInterrupt()
 {
-    serialResponseText = 
-        "apikey:" + APIKEY +
-        ";color:" + String(getIntFromBool(colorButtonStates, BUTTON_COUNT)) +
-        ";state:" + String(discarded ? "2" : (okButtonState ? "3" : "1"));
-    
-    Serial.println(serialResponseText);
+    // If the previous interrupt wasn't processed then don't proceed
+    if (stateChanged) return;
+
+    // Search for the pin with a started state
+    for (int i = 0; i < COLOR_COUNT; i++)
+    {
+        if (colorButtonStates[i] == State::Started)
+        {
+            // Set its state to finished and turn off the indicator led
+            colorButtonStates[i] = State::Finished;
+            stateChanged = true;
+            stateChIndex = i;
+            digitalWrite(ledPins[i], LOW xor SWITCH);
+        }
+    }
 }
-*/
 
 void setup()
 {
     Serial.begin(115200);
-
-    // Connecting to home wifi
+    // Connecting to wifi
     WiFi.begin(SSID, PASSWD);
 
     while (WiFi.status() != WL_CONNECTED)
@@ -109,51 +124,27 @@ void setup()
     Serial.print("\nConnection established! IP address: ");
     Serial.println(WiFi.localIP());
 
-    // Button init
-    for (int button : colorButtonPins)
+    // Initialize buttons and leds
+    for (int i = 0; i < COLOR_COUNT; i++)
     {
-        pinMode(button, INPUT);
+        pinMode(ledPins[i], OUTPUT);
+        digitalWrite(ledPins[i], LOW xor SWITCH);
+        pinMode(colorButtonPins[i], INPUT);
+        attachInterruptArg(digitalPinToInterrupt(colorButtonPins[i]), colorInterrupt, &colorButtonPins[i], RISING);
     }
-    pinMode(okButtonPin, INPUT);
+
+    pinMode(finishButtonPin, INPUT);
+    attachInterrupt(digitalPinToInterrupt(finishButtonPin), finishInterrupt, RISING);
 }
 
 void loop()
 {
-    if (WiFi.status() == WL_CONNECTED) // Only do anything if we are connected to a network
+    if (stateChanged)
     {
-        // Goes through the color buttons available
-        for (size_t i = 0; i < BUTTON_COUNT; i++)
-        {
-            currentButtonState = digitalRead(colorButtonPins[i]) == HIGH ? true : false; // Stores the current button's state
-            isPressed[i] = currentButtonState; // Whether the button is pressed now
-            if (!isPressed[i] && wasPressed[i]) // The user lets the button go
-            {
-                if (currentButton != -1 && !colorButtonStates[i]) // If a color is selected at the moment and it is not this button, don't process the request
-                {
-                    wasPressed[i] = currentButtonState;
-                    break;
-                }
-                else if (currentButton != -1 && colorButtonStates[i]) // If it is this button than discard
-                {
-                    discarded = true;
-                }
-                currentButton = discarded ? -1 : i; // Set the current button's value to i if it is not discarded
-                if (!discarded)
-                {
-                    colorButtonStates[i] = !colorButtonStates[i]; // Negate the button's state
-                }
-                SendDataWifi(); // Send the data to the server
-                if (discarded)
-                {
-                    discarded = false;
-                    colorButtonStates[i] = !colorButtonStates[i]; // Negate the button's state
-                }
-            }
-            wasPressed[i] = currentButtonState; // Stores the button press of the cycle
-        }
-
-        okButtonState = currentButton != -1 && digitalRead(okButtonPin) == HIGH; // The ok button should only be pressed if there is already a color button pressed
-        if (okButtonState) // If that's the case then send the data
-            SendDataWifi();
+        SendData(stateChIndex + 1, colorButtonStates[stateChIndex]);
+        if (colorButtonStates[stateChIndex] != State::Started)
+            colorButtonStates[stateChIndex] = State::None;
+        stateChanged = false;
+        stateChIndex = -1;
     }
 }
