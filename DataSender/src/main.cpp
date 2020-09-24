@@ -3,7 +3,7 @@
 #include <ESP8266HTTPClient.h>
 #define COLOR_COUNT 4 // Defines the number of color buttons present
 // Switch high / low for leds
-#define SWITCH 0x01
+#define SWITCH 0x00
 
 // Pins
 int finishButtonPin = D3;
@@ -17,12 +17,12 @@ volatile bool stateChanged = false;
 volatile int stateChIndex = -1;
 
 // Network details
-const char* SSID = "SandroPC";
-const char* PASSWD = "123456789";
+const char* SSID = "GucziFamily";
+const char* PASSWD = "Spiderma-6";
 const String APIKEY = "wV9ysymCPn9yTYcilpIT"; // Api key, to check whether the connection is authorized
 
 // HTTP connection variables
-String httpServer = "http://192.168.137.208:5000/"; // FLASK implementation
+String httpServer = "http://192.168.1.112:5000/"; // FLASK implementation
 String payload;
 String httpResponseText;
 int httpResponseCode;

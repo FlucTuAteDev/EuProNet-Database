@@ -2,12 +2,13 @@ import re
 from pathlib import Path
 import configHandler
 from networkCommunication import networkComm
-from serialCommunication import serialComm
+# TODO: SERIAL COMMUNICATION
+# from serialCommunication import serialComm
 
 CFGFILE: str = Path(rf"{__file__}\..").absolute()/'config.cfg' #  Configuration file path
 AVAILABLE_MODES: dict = {
-    "network": networkComm, 
-    "serial": serialComm
+    "network": networkComm
+    # "serial": serialComm
 }
 # Required configurations (name -> value regex)
 CONFIG_REQUIREMENTS = {

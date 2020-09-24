@@ -38,8 +38,6 @@ def GetFullPath(p, d = dirname):
 
 CFGFILE = GetFullPath("config.cfg")
 
-
-
 #   1. Read settings from configuration file
 cfg =  default._asdict()
 try:    
