@@ -161,7 +161,7 @@ def SQLInsert(data, cursor = None, addDate = True, table = "queries"):
     return f"INSERT INTO `{table}` ({cols}) VALUES ({vals});"
 
 
-unprocessed = set([])
+unprocessed = []
 
 def Upload():
     """ Reads file contents to dictionary
@@ -169,10 +169,14 @@ def Upload():
         Updates 'history' and 'unprocessed'
         Returns the  number of queries sent"""
     history = []
+    processedLength = 0
 
-    with open(filepath, "r") as f:
-        for l in f.readlines():
-            if l.strip() == "" or l in unprocessed: continue
+    with open(filepath, "r+") as f:
+        lines = f.readlines()
+        f.truncate(0)
+        for l in lines:
+            lstr = l.strip()
+            if lstr == "" or lstr in [upl.strip() for upl in unprocessed]: continue
             data = {"country": countrycode}
             try:
                 for pair in l.split(";"):
@@ -181,8 +185,8 @@ def Upload():
                     k, v = [x.strip() for x in pair.split(":", 1) if x.strip() != ""]
                     data[k] = v
             except: # Exception as e:
-                print(f" Could not parse line {l.strip()!r}. It will be left in the buffer file.")  # \n\t {e}")
-                unprocessed.add(l)
+                print(f" Could not parse line {l!r}. It will be left in the buffer file.")  # \n\t {e}")
+                unprocessed.append(lstr)
                 continue
             
             
@@ -195,10 +199,10 @@ def Upload():
             except Exception as e:
                 print(f"SQL Error: {e!r}")
                 
-    db.commit()
+    with open(filepath, "a") as f:
+        f.write("\n".join(unprocessed))
 
-    with open(filepath, "w") as f:
-        f.writelines(unprocessed)
+    db.commit()
 
     if history != [] and cfg.logfile != None:
         with open(GetFullPath(cfg.logfile), "a") as f:
