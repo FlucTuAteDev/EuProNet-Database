@@ -1,4 +1,8 @@
 .vscode
+**/sqlhelper.py
+**/history.csv
+**/file.csv
+**/config.cfg
 .venv
 *.csv
 *.cfg
