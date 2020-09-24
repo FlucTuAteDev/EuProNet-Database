@@ -1,4 +1,5 @@
 .vscode
+__pycache__
 **/sqlhelper.py
 **/history.csv
 **/file.csv
@@ -6,3 +7,4 @@
 .venv
 *.csv
 *.cfg
+**/trash.py
