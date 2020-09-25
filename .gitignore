@@ -7,4 +7,5 @@ __pycache__
 .venv
 *.csv
 *.cfg
+*.txt
 **/trash.py
