@@ -3,18 +3,18 @@
 # region imports
 import sys
 import time
-import mysql.connector
 import argparse
 import re
 from os import path
 from collections import namedtuple
+import requests
 
 # endregion
 
 # region settings
 
 # exposed, configurable settings
-fields = "address username password dbname filepath logfile"
+fields = "address username password filepath logfile"
 arg = namedtuple("Argument", "short long req")
 args = {
     "filepath": arg("-f", "--filepath", True),
@@ -26,8 +26,7 @@ args = {
 Settings = namedtuple("Settings", fields, defaults=[None] * len(fields.split()))
 
 default = Settings(
-    address="176.241.29.199",
-    dbname="EUPRONET",
+    address="api.derimiksa.hu"
 )
 
 # endregion
@@ -107,20 +106,23 @@ cfg = Settings(**cfg)
 
 # region 4. Connect to database
 
+# Login and get token
+url = f"{cfg.address}/login"
+print(f"Logging in as {cfg.username} at {cfg.address} ...")
 try:
-    db = mysql.connector.connect(
-        host=cfg.address,
-        user=cfg.username,
-        passwd=cfg.password,
-        database=cfg.dbname,
-        connect_timeout=3,
-    )
-except Exception as e:
-    print(f"Error: Could not estabilish connection to {cfg.address}: \n {e}")
-    sys.exit()
+    login = requests.post(url, json={"username": cfg.username, "password": cfg.password}).json()
 
-cursor = db.cursor()
-# endregion
+    # Check stat
+    if login["status"] == "ok":
+        token = login["token"]
+    else:
+        print(f" Login failed: {login['msg']}")
+        sys.exit()
+
+except Exception as e:
+    print(f"Could not establish connection to {url}: \n {e}")
+    sys.exit()
+print(" Login successful!")
 
 # region 5. Check if file exists and get country code
 filepath = GetFullPath(cfg.filepath)
@@ -129,37 +131,11 @@ if not path.isfile(filepath):
     db.close()
     sys.exit()
 
-sql = f"SELECT id FROM `countrycodes` WHERE code = '{cfg.username}' LIMIT 1"
-cursor.execute(sql)
-countrycode = cursor.fetchone()[0]  # TODO: handle if this returns empty
-# endregion
-
 # region 6. Upload
 
 # TODO: check if keys given are real column names
-# TODO: check if given state values exist and ask to create them if they don't
-# TODO: stop adding back unprocessed lines if they were edited at runtime
-# TODO: add date if it doesn't exist 
+# TODO: check if given state values exist
 # TODO: correct excused formatting mistakes when writing to history (e.g. ;;;)
-
-
-def SQLInsert(data, cursor = None, addDate = True, table = "queries"):
-    """ Takes in a dictionary of 'columns:values' and
-        turns them into an sql insert statement 
-
-        addDate: appends 'date:timestamp' if it doesn't exist yet
-        returns the sql query"""
-
-    if addDate and "date" not in data.keys():
-        timestamp = time.strftime(r"%Y-%m-%d %H:%M:%S")
-        data["date"] = timestamp
-
-    cols = ", ".join(data.keys())
-    #!r: uses __repr__ to wrap value in quotes
-    vals = ", ".join([f"{p!r}" for p in data.values()])
-
-    return f"INSERT INTO `{table}` ({cols}) VALUES ({vals});"
-
 
 unprocessed = []
 
@@ -168,8 +144,8 @@ def Upload():
         Sends query
         Updates 'history' and 'unprocessed'
         Returns the  number of queries sent"""
+    global unprocessed
     history = []
-    processedLength = 0
 
     with open(filepath, "r+") as f:
         lines = f.readlines()
@@ -177,7 +153,7 @@ def Upload():
         for l in lines:
             lstr = l.strip()
             if lstr == "" or lstr in [upl.strip() for upl in unprocessed]: continue
-            data = {"country": countrycode}
+            data = {"token": token}
             try:
                 for pair in l.split(";"):
                     if(pair.strip() == ""): continue
@@ -188,21 +164,24 @@ def Upload():
                 print(f" Could not parse line {l!r}. It will be left in the buffer file.")  # \n\t {e}")
                 unprocessed.append(lstr)
                 continue
-            
+            # print(data)
             
             # Send query
-            sql = SQLInsert(data)
-            print(sql)
             try:
-                cursor.execute(sql)
-                history.append(l)
-            except Exception as e:
-                print(f"SQL Error: {e!r}")
+                insert = requests.post(f"{cfg.address}/insert/print", json=data).json()
                 
+                if insert["status"] == "ok":
+                    print(f" Upload successful: {'; '.join(f'{k}: {v}' for k, v in data.items() if k != 'token')}")
+                else:
+                    print(f"Data insertion failed: {insert['msg']}")
+            except Exception as e:
+                print(f"Incorrect upload data: \n {e}")
+                
+            history.append(l)
+
+    unprocessed = [l for l in unprocessed if l in lines]
     with open(filepath, "a") as f:
         f.write("\n".join(unprocessed))
-
-    db.commit()
 
     if history != [] and cfg.logfile != None:
         with open(GetFullPath(cfg.logfile), "a") as f:
@@ -227,11 +206,5 @@ try:
         time.sleep(1)
 except KeyboardInterrupt:
     print("Monitoring ended")
-
-# endregion
-
-# region 8. Cleanup
-
-db.close()
 
 # endregion

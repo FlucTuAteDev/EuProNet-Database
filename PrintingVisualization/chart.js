@@ -88,14 +88,33 @@ var myChart = new Chart(ctx, {
 });
 
 
-function refreshChart(force = false) {
+var oldLength = 0;
+function checkForChange()
+{
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200 && this.responseText != "") { // document.getElementById("demo").innerHTML = this.responseText;
+            var newLength = JSON.parse(this.responseText).change;
+            console.log(newLength);
+            if (newLength != oldLength)
+            {
+                oldLength = newLength;
+                refreshChart();
+            }
+        }
+    };
+    xhttp.open("GET", `http://127.0.0.1:3000/queryCount`, true);
+    xhttp.send();
+}
 
-            var prodStats = JSON.parse(this.responseText);
+function refreshChart() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200 && this.responseText != "") { // document.getElementById("demo").innerHTML = this.responseText;
+            var prodStats = JSON.parse(this.responseText).payload;
+            console.log(prodStats);
             var finished = [];
-            inProgress = [];
+            var inProgress = [];
             for (let i = 0; i < prodStats.length; i++) {
                 finished[i] = parseInt(prodStats[i].finished);
                 inProgress[i] = parseInt(prodStats[i].inProgress);
@@ -103,20 +122,10 @@ function refreshChart(force = false) {
             myChart.data.datasets[0].data = finished;
             myChart.data.datasets[1].data = inProgress;
             myChart.update();
-
         }
     };
-    xhttp.open("GET", `prodStats.php?force=${
-        force ? 1 : 0
-    }`, true);
+    xhttp.open("GET", `http://127.0.0.1:3000/getdata`, true);
     xhttp.send();
-
 }
 
-document.onreadystatechange = () => {
-    if (document.readyState == "complete") {
-        refreshChart(true)
-    }
-}
-
-setInterval(refreshChart, 500);
+setInterval(checkForChange, 500);
