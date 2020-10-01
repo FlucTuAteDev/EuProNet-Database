@@ -1,0 +1,6 @@
+[submodule "Infrastructure/infrastructure"]
+	path = Infrastructure/infrastructure
+	url = https://gitlab.com/Deri-Miksa/eupronet/infrastructure
+[submodule "infrastructure"]
+	path = infrastructure
+	url = https://gitlab.com/Deri-Miksa/eupronet/infrastructure
