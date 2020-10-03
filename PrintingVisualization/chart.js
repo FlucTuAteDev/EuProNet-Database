@@ -87,45 +87,16 @@ var myChart = new Chart(ctx, {
     }
 });
 
+const socket = io('https://api.derimiksa.hu');
 
-var oldLength = 0;
-function checkForChange()
-{
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200 && this.responseText != "") { // document.getElementById("demo").innerHTML = this.responseText;
-            var newLength = JSON.parse(this.responseText).change;
-            console.log(newLength);
-            if (newLength != oldLength)
-            {
-                oldLength = newLength;
-                refreshChart();
-            }
-        }
-    };
-    xhttp.open("GET", `http://127.0.0.1:3000/queryCount`, true);
-    xhttp.send();
-}
+socket.on('telemetry', function(msg){
+    console.log(msg)
+});
 
-function refreshChart() {
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200 && this.responseText != "") { // document.getElementById("demo").innerHTML = this.responseText;
-            var prodStats = JSON.parse(this.responseText).payload;
-            console.log(prodStats);
-            var finished = [];
-            var inProgress = [];
-            for (let i = 0; i < prodStats.length; i++) {
-                finished[i] = parseInt(prodStats[i].finished);
-                inProgress[i] = parseInt(prodStats[i].inProgress);
-            }
-            myChart.data.datasets[0].data = finished;
-            myChart.data.datasets[1].data = inProgress;
-            myChart.update();
-        }
-    };
-    xhttp.open("GET", `http://127.0.0.1:3000/getdata`, true);
-    xhttp.send();
-}
+socket.on('prodStats', function(prodStats){
 
-setInterval(checkForChange, 500);
+    myChart.data.datasets[0].data = prodStats.map(e => parseInt(e.finished));
+    myChart.data.datasets[1].data = prodStats.map(e => parseInt(e.inProgress));
+    
+	myChart.update();   
+});
